@@ -3,7 +3,6 @@ package xtime
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 )
 
@@ -66,76 +65,47 @@ type Future interface {
 	Stop()
 }
 
-type tickerFuture struct {
-	mutex sync.Mutex
-	t     *time.Ticker
-}
+type FutureFunc func()
 
-func (f *tickerFuture) Stop() {
-	f.mutex.Lock()
-	t := f.t
-	f.t = nil
-	f.mutex.Unlock()
-	ReleaseTicker(t)
+func (f FutureFunc) Stop() { f() }
+
+func ClearFuture(f Future) {
+	if f != nil {
+		f.Stop()
+	}
 }
 
 func SetInterval(ctx context.Context, d time.Duration, f func() error) Future {
 	f = ErrRecovered(f)
-	future := &tickerFuture{t: AcquireTicker(nil, d)}
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithCancel(ctx)
 	go func() {
-		defer future.Stop()
+		t := AcquireTicker(nil, d)
+		defer ReleaseTicker(t)
 	LOOP:
 		for {
 			select {
 			case <-ctx.Done():
 				break LOOP
-			case <-future.t.C:
+			case <-t.C:
 				f()
 			}
 		}
 	}()
-	return future
-}
-
-type timeoutFuture struct {
-	mutex sync.Mutex
-	t     *time.Timer
-}
-
-func (f *timeoutFuture) Stop() {
-	f.mutex.Lock()
-	t := f.t
-	f.t = nil
-	f.mutex.Unlock()
-	ReleaseTimer(t)
+	return FutureFunc(func() { cancel() })
 }
 
 func SetTimeout(ctx context.Context, d time.Duration, f func() error) Future {
 	f = ErrRecovered(f)
-	var future = &timeoutFuture{t: AcquireTimer(nil, d)}
-	go func() {
-		defer future.Stop()
-	LOOP:
-		for {
-			select {
-			case <-ctx.Done():
-				break LOOP
-			case <-future.t.C:
-				f()
-				break LOOP
-			}
+	t := time.AfterFunc(d, func() {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			f()
 		}
-	}()
-	return future
-}
-
-func WithTimeout(ctx context.Context, d time.Duration, f func(ctx context.Context) error) func() error {
-	return func() error {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, d)
-		defer cancel()
-		return f(ctx)
-	}
+	})
+	return FutureFunc(func() { ReleaseTimer(t) })
 }
 
 func Sleep(ctx context.Context, d time.Duration) {
