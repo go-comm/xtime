@@ -99,5 +99,5 @@ func ParseInLocation(layout string, value string, loc *time.Location) (t time.Ti
 			return
 		}
 	}
-	return t, err
+	return time.ParseInLocation(layout, value, loc)
 }
