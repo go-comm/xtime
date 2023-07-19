@@ -107,27 +107,27 @@ func StartOfSecond(t time.Time) time.Time {
 }
 
 func EndOfYear(t time.Time) time.Time {
-	return AddYear(StartOfYear(t), 1).Add(-time.Nanosecond)
+	return AddYear(StartOfYear(t), 1).Add(-time.Microsecond)
 }
 
 func EndOfMonth(t time.Time) time.Time {
-	return AddMonth(StartOfMonth(t), 1).Add(-time.Nanosecond)
+	return AddMonth(StartOfMonth(t), 1).Add(-time.Microsecond)
 }
 
 func EndOfDay(t time.Time) time.Time {
-	return StartOfDay(t).Add(time.Hour * 24).Add(-time.Nanosecond)
+	return StartOfDay(t).Add(time.Hour * 24).Add(-time.Microsecond)
 }
 
 func EndOfHour(t time.Time) time.Time {
-	return StartOfHour(t).Add(time.Hour).Add(-time.Nanosecond)
+	return StartOfHour(t).Add(time.Hour).Add(-time.Microsecond)
 }
 
 func EndOfMinute(t time.Time) time.Time {
-	return StartOfMinute(t).Add(time.Minute).Add(-time.Nanosecond)
+	return StartOfMinute(t).Add(time.Minute).Add(-time.Microsecond)
 }
 
 func EndOfSecond(t time.Time) time.Time {
-	return StartOfSecond(t).Add(time.Second).Add(-time.Nanosecond)
+	return StartOfSecond(t).Add(time.Second).Add(-time.Microsecond)
 }
 
 func SinceYear(t time.Time) time.Duration {
