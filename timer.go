@@ -185,13 +185,13 @@ func (m *TimerManager) Has(id int64) bool {
 
 func (m *TimerManager) Reset(id int64, delay time.Duration, period time.Duration, x interface{}, opts ...TimerOption) TimerFuture {
 	e := &timerEntry{id: id, when: when(delay), period: int64(period), data: x}
-	m.add(e, true)
+	m.add(e, true, opts...)
 	return e.Future()
 }
 
 func (m *TimerManager) post(e *timerEntry, opts ...TimerOption) TimerFuture {
 	e.id = id()
-	for !m.add(e, false) {
+	for !m.add(e, false, opts...) {
 		e.id = id()
 	}
 	return e.Future()
