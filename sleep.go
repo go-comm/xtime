@@ -108,7 +108,18 @@ func SetTimeout(ctx context.Context, d time.Duration, f func() error) Future {
 	return FutureFunc(func() { ReleaseTimer(t) })
 }
 
-func Sleep(ctx context.Context, d time.Duration) {
+func Sleep(ctx context.Context, d time.Duration) error {
+	var err error
+	if d <= 0 {
+		select {
+		case <-ctx.Done():
+			err = ctx.Err()
+			break
+		default:
+		}
+		return err
+	}
+
 	var t *time.Timer
 	t = AcquireTimer(t, d)
 	defer ReleaseTimer(t)
@@ -116,9 +127,11 @@ LOOP:
 	for {
 		select {
 		case <-ctx.Done():
+			err = ctx.Err()
 			break LOOP
 		case <-t.C:
 			break LOOP
 		}
 	}
+	return err
 }
