@@ -30,7 +30,7 @@ func SetRetry(ctx context.Context, retries int, f func() (continued bool, err er
 	return SetExecute(ctx, retries, 0, f)
 }
 
-func SetUtil(ctx context.Context, period time.Duration, f func() (continued bool, err error)) error {
+func SetUntil(ctx context.Context, period time.Duration, f func() (continued bool, err error)) error {
 	return SetExecute(ctx, -1, period, f)
 }
 
