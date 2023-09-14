@@ -16,10 +16,7 @@ func SetExecute(ctx context.Context, retries int, period time.Duration, f func()
 			}
 		}
 		continued, err = f()
-		if continued {
-			continue
-		}
-		if err != nil {
+		if !continued {
 			break
 		}
 	}
