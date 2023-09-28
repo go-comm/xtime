@@ -18,7 +18,7 @@ func id() int64 {
 	if n < 0 {
 		n = -n
 	}
-	return n
+	return n >> 10 //  for javascript
 }
 
 func now() int64 {
