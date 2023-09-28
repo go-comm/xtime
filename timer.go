@@ -183,8 +183,14 @@ func (m *TimerManager) Has(id int64) bool {
 	return f
 }
 
-func (m *TimerManager) Reset(id int64, delay time.Duration, period time.Duration, x interface{}, opts ...TimerOption) TimerFuture {
+func (m *TimerManager) Put(id int64, delay time.Duration, period time.Duration, x interface{}, opts ...TimerOption) TimerFuture {
 	e := &timerEntry{id: id, when: when(delay), period: int64(period), data: x}
+	m.add(e, true, opts...)
+	return e.Future()
+}
+
+func (m *TimerManager) PutAt(id int64, t time.Time, period time.Duration, x interface{}, opts ...TimerOption) TimerFuture {
+	e := &timerEntry{id: id, when: t.UnixNano(), period: int64(period), data: x}
 	m.add(e, true, opts...)
 	return e.Future()
 }
