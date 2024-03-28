@@ -3,6 +3,7 @@ package xtime
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 )
 
@@ -75,12 +76,12 @@ func ClearFuture(f Future) {
 	}
 }
 
-func SetInterval(ctx context.Context, d time.Duration, f func() error) Future {
+func SetInterval(ctx context.Context, period time.Duration, f func() error) Future {
 	f = ErrRecovered(f)
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(ctx)
 	go func() {
-		t := AcquireTicker(nil, d)
+		t := AcquireTicker(nil, period)
 		defer ReleaseTicker(t)
 	LOOP:
 		for {
@@ -95,9 +96,8 @@ func SetInterval(ctx context.Context, d time.Duration, f func() error) Future {
 	return FutureFunc(func() { cancel() })
 }
 
-func SetTimeout(ctx context.Context, d time.Duration, f func() error) Future {
-	f = ErrRecovered(f)
-	t := time.AfterFunc(d, func() {
+func setTimeout(ctx context.Context, delay time.Duration, f func() error) Future {
+	t := time.AfterFunc(delay, func() {
 		select {
 		case <-ctx.Done():
 			return
@@ -106,6 +106,37 @@ func SetTimeout(ctx context.Context, d time.Duration, f func() error) Future {
 		}
 	})
 	return FutureFunc(func() { ReleaseTimer(t) })
+}
+
+func SetTimeout(ctx context.Context, delay time.Duration, f func() error) Future {
+	return setTimeout(ctx, delay, ErrRecovered(f))
+}
+
+func SetSchedule(ctx context.Context, delay time.Duration, period time.Duration, f func() error) Future {
+	f = ErrRecovered(f)
+
+	var h func() error
+	var future Future
+	var done int32
+
+	h = func() error {
+		if atomic.LoadInt32(&done) == 1 {
+			return nil
+		}
+		nfu := setTimeout(ctx, period, h)
+		if atomic.LoadInt32(&done) == 1 {
+			nfu.Stop()
+		} else {
+			future = nfu
+		}
+		return f()
+	}
+
+	future = setTimeout(ctx, delay, h)
+	return FutureFunc(func() {
+		atomic.StoreInt32(&done, 1)
+		future.Stop()
+	})
 }
 
 func Sleep(ctx context.Context, d time.Duration) error {
