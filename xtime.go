@@ -130,6 +130,30 @@ func EndOfSecond(t time.Time) time.Time {
 	return StartOfSecond(t).Add(time.Second).Add(-time.Microsecond)
 }
 
+func NextYear(t time.Time) time.Time {
+	return AddYear(StartOfYear(t), 1)
+}
+
+func NextMonth(t time.Time) time.Time {
+	return AddMonth(StartOfMonth(t), 1)
+}
+
+func NextDay(t time.Time) time.Time {
+	return AddDay(StartOfDay(t), 1)
+}
+
+func NextHour(t time.Time) time.Time {
+	return AddHour(StartOfHour(t), 1)
+}
+
+func NextMinute(t time.Time) time.Time {
+	return AddMinute(StartOfMinute(t), 1)
+}
+
+func NextSecond(t time.Time) time.Time {
+	return AddSecond(StartOfSecond(t), 1)
+}
+
 func SinceYear(t time.Time) time.Duration {
 	return t.Sub(StartOfYear(t))
 }
