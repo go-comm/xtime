@@ -97,14 +97,12 @@ func SetInterval(ctx context.Context, period time.Duration, f func() error) Futu
 }
 
 func setTimeout(ctx context.Context, delay time.Duration, f func() error) Future {
-	t := time.AfterFunc(delay, func() {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-			f()
-		}
-	})
+	run := funcRunner(ctx, f)
+	if delay <= time.Millisecond {
+		go run()
+		return FutureFunc(func() {})
+	}
+	t := time.AfterFunc(delay, run)
 	return FutureFunc(func() { ReleaseTimer(t) })
 }
 
@@ -114,7 +112,6 @@ func SetTimeout(ctx context.Context, delay time.Duration, f func() error) Future
 
 func SetSchedule(ctx context.Context, delay time.Duration, period time.Duration, f func() error) Future {
 	f = ErrRecovered(f)
-
 	var h func() error
 	var future Future
 	var done int32
@@ -123,13 +120,18 @@ func SetSchedule(ctx context.Context, delay time.Duration, period time.Duration,
 		if atomic.LoadInt32(&done) == 1 {
 			return nil
 		}
-		nfu := setTimeout(ctx, period, h)
+		t0 := time.Now()
+		err := f()
 		if atomic.LoadInt32(&done) == 1 {
-			nfu.Stop()
-		} else {
-			future = nfu
+			return err
 		}
-		return f()
+		t1 := time.Now()
+		delta := t1.Sub(t0)
+		if period > 0 {
+			d := (delta+period)/period*period - delta
+			future = setTimeout(ctx, d, h)
+		}
+		return err
 	}
 
 	future = setTimeout(ctx, delay, h)
@@ -165,4 +167,15 @@ LOOP:
 		}
 	}
 	return err
+}
+
+func funcRunner(ctx context.Context, f func() error) func() {
+	return func() {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			f()
+		}
+	}
 }
